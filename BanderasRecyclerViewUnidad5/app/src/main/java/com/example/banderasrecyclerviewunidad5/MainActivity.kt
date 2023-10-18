@@ -5,6 +5,10 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Toast
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,22 +19,45 @@ import com.google.android.material.snackbar.Snackbar
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
-    private lateinit var banderaAdapter: BanderaAdapter
     private var originalDataList: List<Bandera> = BanderaProvider.banderaList
     private lateinit var listaBandera: MutableList<Bandera>
     private lateinit var adapter: BanderaAdapter
+    private lateinit var intentLaunch: ActivityResultLauncher<Intent>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         initRecyclerView()
-        // Usando BanderaProvider.banderaList para inicializar
-        banderaAdapter = BanderaAdapter(BanderaProvider.banderaList.toMutableList()) { bandera ->
-            onContextItemSelected(bandera as MenuItem)
+        listaBandera = mutableListOf()
+        for (bandera: Bandera in BanderaProvider.banderaList){
+            listaBandera.add(bandera)
         }
-        binding.rvBanderas.adapter = banderaAdapter // Cambio aquí
+
+        // Usando BanderaProvider.banderaList para inicializar
+        adapter = BanderaAdapter(listaBandera) { bandera ->
+            onItemSelected(bandera.nombre)
+        }
+        binding.rvBanderas.adapter = adapter // Cambio aquí
         invalidateOptionsMenu()
+
+        intentLaunch=registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult())
+        {
+            result:ActivityResult ->
+            if(result.resultCode== RESULT_OK){
+                val posicion = result.data?.extras?.getInt("posicion", 0)
+                listaBandera[posicion!!].nombre=result.data?.extras?.getString("nombre").toString()
+                adapter.notifyItemChanged(posicion)
+            }
+        }
+
+
+    }
+
+
+    private fun onItemSelected(nombre: String) {
+        Toast.makeText(this, "Yo soy de ${nombre}.", Toast.LENGTH_SHORT).show()
     }
 
     private fun initRecyclerView() {
@@ -52,13 +79,13 @@ class MainActivity : AppCompatActivity() {
             R.id.action_clear -> {
                 // Limpiar la lista (vaciar) O cualquier otra forma de obtener una lista vacía
                 val emptyList: List<Bandera> = emptyList()
-                banderaAdapter.updateData(emptyList)
+                adapter.updateData(emptyList)
                 return true
             }
 
             R.id.action_reload -> {
                 // Recargar la lista (asumiendo que tienes una lista original)
-                banderaAdapter.updateData(originalDataList)
+                adapter.updateData(originalDataList)
                 return true
             }
 
@@ -85,6 +112,13 @@ class MainActivity : AppCompatActivity() {
                         }
                     }.create()
                 alert.show()
+            }
+            1 -> {
+                val intent = Intent(this, MainActivityDos::class.java)
+                intent.putExtra("nombre", banderaAfectada.nombre)
+                intent.putExtra("imagen", banderaAfectada.imagen)
+                intent.putExtra("posicion", item.groupId)
+                intentLaunch.launch(intent)
             }
 
             else -> return super.onContextItemSelected(item)

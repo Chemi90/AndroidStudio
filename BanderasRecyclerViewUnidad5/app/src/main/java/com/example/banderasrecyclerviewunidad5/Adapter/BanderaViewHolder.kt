@@ -30,5 +30,6 @@ class BanderaViewHolder(view: View) : RecyclerView.ViewHolder(view), View.OnCrea
     ) {
         menu!!.setHeaderTitle(bandera.nombre)
         menu.add(this.adapterPosition,0,0,"Eliminar")
+        menu.add(this.adapterPosition,1,1,"Editar")
     }
 }
